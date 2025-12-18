@@ -14,6 +14,8 @@ set(ABSL_USE_GOOGLETEST_HEAD ON)
 # 对应于 -DABSL_BUILD_TESTING=OFF (使用最后指定的值)
 set(ABSL_BUILD_TESTING OFF)
 
+set(QT_DEPENDENCY ON)
+
 option(TWRTC_USE_INSTALLED_ABSL "Use installed Abseil (find_package) instead of building 3rd/abseil-cpp" ON)
 
 if(TWRTC_USE_INSTALLED_ABSL)

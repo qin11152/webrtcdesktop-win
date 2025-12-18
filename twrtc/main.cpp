@@ -1,5 +1,8 @@
+
+#if defined(qt_dependency)
 #include "twrtc.h"
 #include <QtWidgets/QApplication>
+#endif
 
 #include "rtc_base/ssl_adapter.h"
 #include "rtc_base/logging.h"
@@ -25,7 +28,7 @@ public:
     void OnCaptureResult(webrtc::DesktopCapturer::Result result,
                          std::unique_ptr<webrtc::DesktopFrame> frame) override
     {
-        std::ofstream yuvfile("frame.yuv", std::ios::binary|std::ios::app);
+        std::ofstream yuvfile("frame.yuv", std::ios::binary | std::ios::app);
         if (result == webrtc::DesktopCapturer::Result::SUCCESS)
         {
             std::cout << "[Callback] Frame captured: "
@@ -57,10 +60,6 @@ int main(int argc, char *argv[])
         return 2;
     }
 
-    QApplication app(argc, argv);
-    twrtc window;
-    window.show();
-
     std::thread tmp([]()
                     {
                     MyDesktopCapturerCallback callback;
@@ -88,9 +87,21 @@ int main(int argc, char *argv[])
                         std::this_thread::sleep_for(std::chrono::milliseconds(40)); // 等待回调完成
                     }
                     std::this_thread::sleep_for(std::chrono::seconds(1));
-                    screen_capture_.reset(); 
-    });
-    tmp.detach();
+                    screen_capture_.reset(); });
 
-    return app.exec();
+    #if defined(qt_dependency)
+    {
+        QApplication app(argc, argv);
+        twrtc window;
+        window.show();
+        tmp.detach();
+        return app.exec();
+    }
+    #else
+    {
+        tmp.join();
+        return 0;
+    }
+    #endif
+    return -1;
 }
