@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project("twrtc")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 3rd/lib 里的 webrtcd.lib 采用静态运行库（MTd）编译。
@@ -14,9 +14,11 @@ set(ABSL_USE_GOOGLETEST_HEAD ON)
 # 对应于 -DABSL_BUILD_TESTING=OFF (使用最后指定的值)
 set(ABSL_BUILD_TESTING OFF)
 
+set(ABSL_MSVC_STATIC_RUNTIME ON)
+
 set(QT_DEPENDENCY ON)
 
-option(TWRTC_USE_INSTALLED_ABSL "Use installed Abseil (find_package) instead of building 3rd/abseil-cpp" ON)
+option(TWRTC_USE_INSTALLED_ABSL "Use installed Abseil (find_package) instead of building 3rd/abseil-cpp" OFF)
 
 if(TWRTC_USE_INSTALLED_ABSL)
 	# Prefer a prebuilt/installed Abseil to avoid rebuilding it every time.

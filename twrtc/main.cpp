@@ -4,6 +4,8 @@
 #include <QtWidgets/QApplication>
 #endif
 
+#include "module/pushclient.h"
+
 #include "rtc_base/ssl_adapter.h"
 #include "rtc_base/logging.h"
 
@@ -11,6 +13,10 @@
 #include "modules/desktop_capture/desktop_capture_options.h"
 #include "modules/desktop_capture/desktop_frame.h"
 #include "modules/desktop_capture/screen_capturer_helper.h"
+#include "module/demo/flag_defs.h"
+
+#include "rtc_base/win32_socket_init.h"
+#include "absl/flags/flag.h"
 
 #include <iostream>
 #include <fstream>
@@ -48,20 +54,53 @@ public:
     }
 };
 
+class CustomSocketServer : public rtc::PhysicalSocketServer
+{
+public:
+    bool Wait(webrtc::TimeDelta max_wait_duration, bool process_io) override
+    {
+        if (!process_io)
+        {
+            return true;
+        }
+        return rtc::PhysicalSocketServer::Wait(webrtc::TimeDelta::Zero(), process_io);
+    }
+};
+
 int main(int argc, char *argv[])
 {
-    rtc::LogMessage::SetLogToStderr(true);
-    // rtc::LogMessage::LogToDebug(rtc::LS_INFO); // 或者 rtc::LS_INFO
-    std::cout << "[webrtc-smoke] Start" << std::endl;
+    rtc::WinsockInitializer winsock_init;
 
-    if (!rtc::InitializeSSL())
+    CustomSocketServer ss;
+    rtc::AutoSocketServerThread main_thread(&ss);
+
+    rtc::LogMessage::SetLogToStderr(true);
+
+    rtc::InitializeSSL();
+
+    if ((absl::GetFlag(FLAGS_port) < 1) || (absl::GetFlag(FLAGS_port) > 65535))
     {
-        RTC_LOG(LS_ERROR) << "Failed to initialize SSL";
-        return 2;
+        printf("Error: %i is not a valid port.\n", absl::GetFlag(FLAGS_port));
+        return -1;
     }
 
-    std::thread tmp([]()
-                    {
+    const std::string server = absl::GetFlag(FLAGS_server);
+
+    // rtc::LogMessage::LogToDebug(rtc::LS_INFO); // 或者 rtc::LS_INFO
+    std::cout << "[webrtc-smoke] Start" << std::endl;
+#if defined(qt_dependency)
+    {
+        QApplication app(argc, argv);
+        twrtc window;
+        window.show();
+
+        // tmp.detach();
+        return app.exec();
+    }
+#else
+    {
+        std::thread tmp([]()
+                        {
                     MyDesktopCapturerCallback callback;
                     auto screen_capture_ = webrtc::DesktopCapturer::CreateScreenCapturer(webrtc::DesktopCaptureOptions::CreateDefault());
                     if (!screen_capture_)
@@ -88,20 +127,9 @@ int main(int argc, char *argv[])
                     }
                     std::this_thread::sleep_for(std::chrono::seconds(1));
                     screen_capture_.reset(); });
-
-    #if defined(qt_dependency)
-    {
-        QApplication app(argc, argv);
-        twrtc window;
-        window.show();
-        tmp.detach();
-        return app.exec();
-    }
-    #else
-    {
         tmp.join();
         return 0;
     }
-    #endif
+#endif
     return -1;
 }
